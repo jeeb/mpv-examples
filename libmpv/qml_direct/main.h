@@ -41,6 +41,7 @@ public slots:
     void swapped();
     void cleanup();
     void reinitRenderer();
+    void setFullScreen();
 signals:
     void onUpdate();
 private slots:

@@ -1,5 +1,5 @@
 QT += qml quick
-
+android: QT += core androidextras
 HEADERS += main.h
 SOURCES += main.cpp
 

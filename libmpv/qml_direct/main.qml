@@ -1,11 +1,36 @@
-import QtQuick 2.0
-import QtQuick.Controls 1.0
+import QtQuick 2.2
+import QtQuick.Controls 1.2
+import QtQuick.Dialogs 1.1
 
 import mpvtest 1.0
 
-Item {
+ApplicationWindow {
     width: 1280
     height: 720
+    color: "#00000000"
+    title: qsTr("MPV QML Test")
+    visible: true
+
+    FileDialog {
+        id: fileDialog
+        title: "Please choose a file"
+        folder: fileDialog.shortcuts.pictures
+
+        onAccepted: {
+            console.log("You chose: " + fileDialog.fileUrl)
+
+            console.log("calling setFullScreen")
+            renderer.setFullScreen()
+
+            renderer.command(["loadfile",fileDialog.fileUrl.toString() /*.replace("file://", "")*/])
+            fileDialog.close()
+        }
+        onRejected: {
+            console.log("Canceled")
+            fileDialog.close()
+        }
+        // Component.onCompleted: visible = true
+    }
 
     MpvObject {
         id: renderer
@@ -18,7 +43,8 @@ Item {
 
     MouseArea {
         anchors.fill: parent
-        onClicked: renderer.command(["loadfile", "test.mkv"])
+        // onClicked: renderer.command(["loadfile", "/storage/emulated/0/Video/DTB_OP.mkv"])
+        onClicked: fileDialog.open()
     }
 
     Rectangle {

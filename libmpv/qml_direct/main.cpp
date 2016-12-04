@@ -8,8 +8,15 @@
 #include <QOpenGLContext>
 
 #include <QGuiApplication>
+#include <QtQml/QQmlApplicationEngine>
 #include <QtQuick/QQuickWindow>
 #include <QtQuick/QQuickView>
+
+#ifdef __ANDROID__
+#include <QtAndroidExtras/qandroidfunctions.h>
+#include <QtAndroidExtras/qandroidjnienvironment.h>
+#include <QtCore/qdebug.h>
+#endif
 
 static void *get_proc_address(void *ctx, const char *name) {
     (void)ctx;
@@ -57,8 +64,7 @@ MpvObject::MpvObject(QQuickItem * parent)
     if (!mpv)
         throw std::runtime_error("could not create mpv context");
 
-    mpv_set_option_string(mpv, "terminal", "yes");
-    mpv_set_option_string(mpv, "msg-level", "all=v");
+    mpv_request_log_messages(mpv, "v");
 
     if (mpv_initialize(mpv) < 0)
         throw std::runtime_error("could not initialize mpv context");
@@ -144,6 +150,8 @@ void MpvObject::command(const QVariant& params)
     mpv::qt::command_variant(mpv, params);
 }
 
+
+
 void MpvObject::reinitRenderer()
 {
     // Don't make it stop playback if the VO dies.
@@ -153,6 +161,31 @@ void MpvObject::reinitRenderer()
     killOnce = true;
     window()->update();
 }
+
+#ifdef __ANDROID__
+void MpvObject::setFullScreen() {
+    QAndroidJniObject activity = QtAndroid::androidActivity();
+    if (!activity.isValid()) {
+       QMessageLogger().fatal("activity is not valid :<");
+       return;
+    }
+
+    QAndroidJniObject window = activity.callObjectMethod("getWindow", "()Landroid/view/Window;");
+    if (!window.isValid()) {
+        QMessageLogger().fatal("window is not valid :<");
+        return;
+    }
+
+    const int FLAG_KEEP_SCREEN_ON = 128;
+    const int FLAG_FULLSCREEN = 1024;
+    //      const int FLAG_FORCE_NOT_FULLSCREEN = 2048;
+    window.callMethod<void>("addFlags", "(I)V", FLAG_KEEP_SCREEN_ON | FLAG_FULLSCREEN);
+
+    QAndroidJniEnvironment env;
+    if (env->ExceptionCheck())
+        env->ExceptionClear();
+}
+#endif
 
 int main(int argc, char **argv)
 {
@@ -164,10 +197,12 @@ int main(int argc, char **argv)
 
     qmlRegisterType<MpvObject>("mpvtest", 1, 0, "MpvObject");
 
-    QQuickView view;
+    QQmlApplicationEngine engine(QUrl("qrc:///mpvtest/main.qml"));
+
+    /*QQuickView view;
     view.setResizeMode(QQuickView::SizeRootObjectToView);
     view.setSource(QUrl("qrc:///mpvtest/main.qml"));
-    view.show();
+    view.show();*/
 
     return app.exec();
 }
